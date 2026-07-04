@@ -1,0 +1,121 @@
+name: Build & deploy file index to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate index.html
+        run: |
+          python3 - <<'PY'
+          import os, html
+
+          # Files/folders to skip in the listing
+          SKIP_NAMES = {"index.html", "README.md", "LICENSE", ".gitignore"}
+          SKIP_DIRS  = {".git", ".github"}
+
+          def icon(name):
+              n = name.lower()
+              if n.endswith((".html", ".htm")): return "🗺️"
+              if n.endswith(".pdf"): return "📕"
+              if n.endswith((".xlsx", ".xls", ".csv")): return "📊"
+              if n.endswith((".docx", ".doc")): return "📝"
+              if n.endswith((".pptx", ".ppt")): return "📽️"
+              if n.endswith((".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp")): return "🖼️"
+              return "📄"
+
+          entries = []
+          for root, dirs, files in os.walk("."):
+              dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+              for f in sorted(files):
+                  if f in SKIP_NAMES:
+                      continue
+                  rel = os.path.relpath(os.path.join(root, f), ".").replace("\\", "/")
+                  entries.append(rel)
+          entries.sort(key=str.lower)
+
+          items = ""
+          for rel in entries:
+              name = os.path.basename(rel)
+              items += f'''      <li>
+            <a class="file" href="{html.escape(rel)}">
+              <span class="ico">{icon(name)}</span>
+              <span>
+                <div class="name">{html.escape(name)}</div>
+                <div class="desc">{html.escape(rel)}</div>
+              </span>
+            </a>
+          </li>
+'''
+          if not items:
+              items = '      <li><a class="file"><span class="ico">📭</span><span><div class="name">Chưa có tài liệu nào</div></span></a></li>\n'
+
+          page = f'''<!DOCTYPE html>
+          <html lang="vi">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Hệ thống tài chính — Danh sách tài liệu</title>
+          <style>
+            :root {{ --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; }}
+            * {{ box-sizing:border-box; }}
+            body {{ margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }}
+            .wrap {{ max-width:760px; margin:0 auto; padding:48px 20px; }}
+            h1 {{ font-size:1.7rem; margin:0 0 4px; }}
+            .sub {{ color:var(--muted); margin:0 0 32px; }}
+            ul {{ list-style:none; padding:0; margin:0; }}
+            li {{ background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:12px; transition:border-color .15s; }}
+            li:hover {{ border-color:var(--accent); }}
+            a.file {{ display:flex; align-items:center; gap:14px; padding:16px 18px; color:var(--text); text-decoration:none; }}
+            .ico {{ font-size:1.4rem; }}
+            .name {{ font-weight:600; word-break:break-all; }}
+            .desc {{ color:var(--muted); font-size:.9rem; word-break:break-all; }}
+            footer {{ margin-top:36px; color:var(--muted); font-size:.85rem; text-align:center; }}
+          </style>
+          </head>
+          <body>
+            <div class="wrap">
+              <h1>Hệ thống tài chính</h1>
+              <p class="sub">Danh sách tài liệu chia sẻ — tự động cập nhật</p>
+              <ul>
+          {items}    </ul>
+              <footer>Trang được tạo tự động bởi GitHub Actions mỗi khi repo thay đổi.</footer>
+            </div>
+          </body>
+          </html>
+          '''
+          # remove the leading indentation used for readability above
+          page = "\n".join(line[10:] if line.startswith("          ") else line for line in page.splitlines()) + "\n"
+          with open("index.html", "w", encoding="utf-8") as fh:
+              fh.write(page)
+          print("Generated index.html with", len(entries), "entries")
+          PY
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
