@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hệ thống tài chính — Danh sách tài liệu</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+         background:var(--bg); color:var(--text); line-height:1.6; }
+  .wrap { max-width:760px; margin:0 auto; padding:48px 20px; }
+  h1 { font-size:1.7rem; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 32px; }
+  ul { list-style:none; padding:0; margin:0; }
+  li { background:var(--card); border:1px solid var(--border); border-radius:10px;
+       margin-bottom:12px; transition:border-color .15s; }
+  li:hover { border-color:var(--accent); }
+  a.file { display:flex; align-items:center; gap:14px; padding:16px 18px;
+           color:var(--text); text-decoration:none; }
+  .ico { font-size:1.4rem; }
+  .name { font-weight:600; }
+  .desc { color:var(--muted); font-size:.9rem; }
+  footer { margin-top:36px; color:var(--muted); font-size:.85rem; text-align:center; }
+  footer a { color:var(--accent); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Hệ thống tài chính</h1>
+    <p class="sub">Danh sách tài liệu chia sẻ</p>
+    <ul>
+      <li>
+        <a class="file" href="he-thong-tai-chinh-mindmap-v2.html">
+          <span class="ico">🗺️</span>
+          <span>
+            <div class="name">Mindmap: Thành phần của hệ thống tài chính</div>
+            <div class="desc">Sơ đồ tư duy tương tác (HTML)</div>
+          </span>
+        </a>
+      </li>
+    </ul>
+    <footer>
+      Cập nhật: thêm mục mới bằng cách chèn thêm một khối &lt;li&gt; trong file này.
+    </footer>
+  </div>
+</body>
+</html>
