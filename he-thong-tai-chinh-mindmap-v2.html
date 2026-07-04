@@ -1,0 +1,1513 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Thành phần của hệ thống tài chính</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#111c33; --ink:#e5edff; --muted:#93a4c9;
+    --line:#31456f; --accent:#4f8cff;
+    --b1:#4f8cff; --b2:#22c55e; --b3:#f59e0b; --b4:#ec4899; --b5:#a855f7; --b6:#14b8a6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+       background:var(--bg);color:var(--ink)}
+  .site-shell{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
+  .hero h1{margin:0 0 6px;font-size:26px}
+  .hero .lede{margin:0;color:var(--muted);max-width:760px;font-size:14px;line-height:1.5}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0 12px}
+  .toolbar button{background:var(--card);color:var(--ink);border:1px solid var(--line);
+       border-radius:8px;padding:7px 12px;cursor:pointer;font-size:13px}
+  .toolbar button:hover{border-color:var(--accent)}
+  .zoom-control{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;margin-left:auto}
+  .diagram-card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .diagram-viewport{overflow:auto;height:70vh;cursor:grab}
+  .diagram-viewport.dragging{cursor:grabbing}
+  .diagram-canvas{transform-origin:top center;padding:28px 40px;width:max-content;min-width:100%;position:relative}
+  ul.tree,ul.tree ul{list-style:none;margin:0;padding:0;display:flex;gap:26px;justify-content:center}
+  ul.tree{flex-direction:column;align-items:center}
+  ul.tree li{display:flex;flex-direction:column;align-items:center;position:relative}
+  ul.tree li>ul{margin-top:34px}
+  .node{position:relative;z-index:2;display:flex;flex-direction:column;align-items:stretch;min-width:130px;max-width:200px}
+  .node-main{background:#16233f;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;
+       cursor:pointer;color:var(--ink);text-align:center;font-size:13px;line-height:1.35;font-weight:600;transition:.15s}
+  .node-main:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .node-en{display:block;font-size:9.5px;font-weight:400;font-style:italic;color:var(--muted);margin-top:2px;line-height:1.25}
+  .panel-en{font-size:13px;font-weight:400;font-style:italic;color:var(--muted);margin-top:2px}
+  .panel-flow{margin:10px 0 4px;background:#0c1830;border:1px solid var(--line);border-radius:10px;padding:8px}
+  .panel-flow svg{width:100%;height:auto;display:block}
+  .flow-block{fill:#16233f;stroke:var(--line);stroke-width:1.5}
+  .flow-block-label{fill:#e8eefc;font-size:11px;font-weight:600}
+  .flow-block-label.small{font-size:9.5px;font-weight:400;fill:#9fb0d0}
+  .flow-link-label{fill:#9fb0d0;font-size:9px;font-style:italic}
+  .node .node-num{font-size:10px;color:var(--muted);margin-bottom:3px;text-align:center}
+  .node.is-expanded .node-main{box-shadow:0 0 0 2px rgba(79,140,255,.25)}
+  .node-expand-bar{margin-top:5px;height:14px;border:none;border-radius:6px;background:#1d2c4d;color:var(--muted);
+       cursor:pointer;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center}
+  .node-expand-bar:hover{background:var(--accent);color:#fff}
+  .node.branch-1 .node-main{border-color:var(--b1)} .node.branch-2 .node-main{border-color:var(--b2)}
+  .node.branch-3 .node-main{border-color:var(--b3)} .node.branch-4 .node-main{border-color:var(--b4)}
+  .node.branch-5 .node-main{border-color:var(--b5)} .node.branch-6 .node-main{border-color:var(--b6)}
+  svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+  svg.links path{fill:none;stroke:var(--line);stroke-width:1.6}
+  .scrim{position:fixed;inset:0;background:rgba(5,10,24,.55);z-index:40}
+  .detail-panel{position:fixed;top:0;right:0;height:100vh;width:min(440px,92vw);background:var(--card);
+       border-left:1px solid var(--line);transform:translateX(100%);transition:.25s;z-index:50;
+       display:flex;flex-direction:column;padding:20px}
+  .detail-panel.open{transform:translateX(0)}
+  .panel-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;cursor:grab;user-select:none}
+  .panel-header:active{cursor:grabbing}
+  .detail-panel.floating{top:auto;right:auto;height:auto;max-height:86vh;width:440px;min-width:280px;min-height:200px;
+       border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);
+       resize:both;overflow:auto;transition:none;transform:none}
+  .panel-hint{font-size:10px;color:var(--muted);margin-top:6px;font-style:italic}
+  .panel-resizer{position:absolute;left:0;top:0;bottom:0;width:8px;cursor:ew-resize;z-index:5;
+       border-left:3px solid transparent;transition:border-color .15s}
+  .panel-resizer:hover,.panel-resizer.active{border-left-color:var(--accent)}
+  .panel-id{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .panel-header h2{margin:4px 0 0;font-size:19px}
+  .icon-button{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+  .panel-group{color:var(--accent);font-size:12px;margin:10px 0 4px;font-weight:600}
+  .markdown-content{font-size:14px;line-height:1.6;color:#cdd8f2;overflow:auto}
+  .markdown-content h3{font-size:15px;margin:14px 0 6px}
+  .markdown-content ul{padding-left:18px;margin:6px 0}
+  .markdown-content code{background:#0c1830;padding:1px 5px;border-radius:4px;font-size:12px}
+  .markdown-content a{color:var(--accent)}
+  .child-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .child-pills button{background:#16233f;border:1px solid var(--line);color:var(--ink);border-radius:20px;
+       padding:5px 10px;font-size:12px;cursor:pointer}
+  .child-pills button:hover{border-color:var(--accent)}
+  h3.section{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 6px}
+</style>
+</head>
+<body>
+<div class="site-shell">
+  <header class="hero">
+    <h1>Thành phần của hệ thống tài chính</h1>
+    <p class="lede">Bấm thanh dưới mỗi node để mở/thu nhánh; bấm tên node để xem chi tiết và sơ đồ quan hệ — panel kéo tách/nới rộng được. Nguồn: Bài giảng 01 – Tài chính phát triển, MPP27 (FSPPM).</p>
+  </header>
+  <nav class="toolbar">
+    <button id="expandAll" type="button">Mở toàn bộ</button>
+    <button id="collapseAll" type="button">Thu gọn</button>
+    <label class="zoom-control">Zoom
+      <input id="zoomRange" type="range" min="0.5" max="1.4" value="0.9" step="0.05" />
+      <span id="zoomValue">0.90×</span>
+    </label>
+  </nav>
+  <main>
+    <section class="diagram-card">
+      <div id="diagramViewport" class="diagram-viewport">
+        <div id="diagramCanvas" class="diagram-canvas"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="scrim" class="scrim" hidden></div>
+<aside id="detailPanel" class="detail-panel" aria-hidden="true">
+  <div id="panelResizer" class="panel-resizer" title="Kéo để nới rộng/thu hẹp"></div>
+  <div class="panel-header">
+    <div><div id="panelId" class="panel-id">Node</div><h2 id="panelTitle"></h2></div>
+    <button id="closePanel" class="icon-button" type="button" aria-label="Dong">&times;</button>
+  </div>
+  <div class="panel-hint">Kéo cạnh trái để nới rộng • kéo tiêu đề để tách panel • nháy đúp tiêu đề để gắn lại cạnh phải</div>
+  <div id="panelGroup" class="panel-group"></div>
+  <div id="panelFlow" class="panel-flow" hidden></div>
+  <div id="panelDescription" class="markdown-content"></div>
+  <h3 class="section" id="childrenLabel" hidden>Cac nhanh con</h3>
+  <div id="panelChildren" class="child-pills"></div>
+</aside>
+
+<script>
+/* ============================================================
+   DU LIEU - chi can thay object diagramData nay cho topic moi.
+   Moi node: { id, title, en(phu de tieng Anh, tuy chon), group, kind, detail(Markdown), children:[] }
+   ============================================================ */
+const diagramData =
+/*__DIAGRAM_DATA__*/
+{
+  "id": 1,
+  "title": "Thành phần của hệ thống tài chính",
+  "group": "MPP27 – Tài chính phát triển – Bài giảng 01",
+  "detail": "**Nguồn:** Bài giảng 01 *Hệ thống tài chính toàn cầu và vai trò của tài chính đối với phát triển kinh tế* — GV. Trần Thị Quế Giang, FSPPM, MPP27 (Học kỳ Hè 2026).\n\nHệ thống tài chính gồm **4 thành phần** chính:\n\n1. **Tổ chức tài chính** — các định chế trung gian huy động và phân bổ vốn\n2. **Thị trường tài chính** — nơi giao dịch vốn và các tài sản tài chính\n3. **Công cụ tài chính** — các tài sản/hợp đồng được giao dịch trên thị trường\n4. **Cơ sở hạ tầng tài chính** — khuôn khổ luật lệ và hệ thống nền tảng cho giao dịch\n\nNgoài ra, bài giảng đặt hệ thống tài chính quốc gia trong **bối cảnh hệ thống tài chính toàn cầu** (IMF, WB, BIS, FSB, G-20…).\n\n**Chức năng của hệ thống tài chính** (mục 2 bài giảng): cầu nối tiết kiệm – đầu tư; sàng lọc, chuyển giao, phân tán rủi ro; giám sát doanh nghiệp; vận hành hệ thống thanh toán.",
+  "children": [
+    {
+      "id": 10,
+      "title": "Tổ chức tài chính",
+      "group": "1.2 – Các tổ chức tài chính",
+      "detail": "Các định chế tài chính chia thành **hai khối** lớn:\n\n- **Tổ chức tín dụng**: ngân hàng, tổ chức tín dụng hợp tác, tổ chức tín dụng phi ngân hàng\n- **Tổ chức tài chính khác**: công ty chứng khoán, công ty đầu tư CK, công ty quản lý quỹ, công ty bảo hiểm\n\nĐây là các trung gian tài chính thực hiện chức năng huy động – phân bổ vốn, sàng lọc rủi ro và giám sát doanh nghiệp.",
+      "children": [
+        {
+          "id": 11,
+          "title": "Tổ chức tín dụng",
+          "group": "Tổ chức tài chính",
+          "detail": "Tổ chức được phép nhận tiền gửi và cấp tín dụng, gồm ba nhóm:\n\n- **Ngân hàng** (NHTM, NH phát triển, NH chính sách xã hội)\n- **Tổ chức tín dụng hợp tác** (quỹ tín dụng nhân dân, HTX tín dụng, TCTC vi mô)\n- **Tổ chức tín dụng phi ngân hàng** (công ty tài chính, công ty cho thuê tài chính)",
+          "children": [
+            {
+              "id": 12,
+              "title": "Ngân hàng",
+              "group": "Tổ chức tín dụng",
+              "detail": "Ba loại hình ngân hàng:\n\n- **Ngân hàng thương mại** — kinh doanh tiền tệ vì lợi nhuận\n- **Ngân hàng phát triển** — tài trợ dự án phát triển dài hạn\n- **Ngân hàng chính sách xã hội** — cho vay theo chính sách, phi lợi nhuận",
+              "children": [
+                {
+                  "id": 13,
+                  "title": "NH thương mại",
+                  "group": "Ngân hàng",
+                  "detail": "Phân theo sở hữu:\n\n- **NHTM nhà nước**\n- **NHTM cổ phần** — đô thị và nông thôn\n- **NHTM nước ngoài** — 100% vốn nước ngoài, liên doanh, chi nhánh NH nước ngoài",
+                  "children": [
+                    {
+                      "id": 14,
+                      "title": "NHTM nhà nước",
+                      "kind": "leaf",
+                      "group": "NH thương mại",
+                      "detail": "Ngân hàng thương mại do Nhà nước sở hữu (toàn bộ hoặc chi phối).",
+                      "en": "State-owned Commercial Banks"
+                    },
+                    {
+                      "id": 15,
+                      "title": "NHTM cổ phần",
+                      "kind": "leaf",
+                      "group": "NH thương mại",
+                      "detail": "Gồm hai loại theo địa bàn:\n\n- NHTM cổ phần **đô thị**\n- NHTM cổ phần **nông thôn**",
+                      "en": "Joint-stock Commercial Banks"
+                    },
+                    {
+                      "id": 16,
+                      "title": "NHTM nước ngoài",
+                      "kind": "leaf",
+                      "group": "NH thương mại",
+                      "detail": "Ba hình thức hiện diện:\n\n- Ngân hàng **100% vốn nước ngoài**\n- Ngân hàng **liên doanh**\n- **Chi nhánh** ngân hàng nước ngoài",
+                      "en": "Foreign Commercial Banks"
+                    }
+                  ],
+                  "en": "Commercial Banks"
+                },
+                {
+                  "id": 17,
+                  "title": "NH phát triển",
+                  "kind": "leaf",
+                  "group": "Ngân hàng",
+                  "detail": "Ngân hàng chuyên tài trợ các dự án phát triển kinh tế dài hạn (hạ tầng, công nghiệp trọng điểm…), thường theo định hướng của Nhà nước.",
+                  "en": "Development Banks"
+                },
+                {
+                  "id": 18,
+                  "title": "NH chính sách xã hội",
+                  "kind": "leaf",
+                  "group": "Ngân hàng",
+                  "detail": "Ngân hàng hoạt động phi lợi nhuận, cho vay hộ nghèo và các đối tượng chính sách theo chương trình của Chính phủ.",
+                  "en": "Social Policy Banks"
+                }
+              ],
+              "en": "Banks"
+            },
+            {
+              "id": 19,
+              "title": "TCTD hợp tác",
+              "group": "Tổ chức tín dụng",
+              "detail": "Tổ chức tín dụng dạng hợp tác, phục vụ thành viên và cộng đồng:\n\n- **Quỹ tín dụng nhân dân**\n- **Hợp tác xã tín dụng**\n- **Tổ chức tài chính vi mô** — cấp tín dụng nhỏ cho người thu nhập thấp",
+              "children": [
+                {
+                  "id": 20,
+                  "title": "Quỹ tín dụng ND",
+                  "kind": "leaf",
+                  "group": "TCTD hợp tác",
+                  "detail": "Quỹ tín dụng nhân dân — huy động và cho vay trong phạm vi thành viên, địa bàn xã/phường.",
+                  "en": "People's Credit Funds"
+                },
+                {
+                  "id": 21,
+                  "title": "HTX tín dụng",
+                  "kind": "leaf",
+                  "group": "TCTD hợp tác",
+                  "detail": "Hợp tác xã tín dụng — mô hình tín dụng hợp tác của các thành viên góp vốn.",
+                  "en": "Credit Cooperatives"
+                },
+                {
+                  "id": 22,
+                  "title": "TCTC vi mô",
+                  "kind": "leaf",
+                  "group": "TCTD hợp tác",
+                  "detail": "Tổ chức tài chính vi mô — cung cấp khoản vay nhỏ, tiết kiệm cho hộ nghèo, người thu nhập thấp không tiếp cận được ngân hàng.",
+                  "en": "Microfinance Institutions"
+                }
+              ],
+              "en": "Cooperative Credit Institutions"
+            },
+            {
+              "id": 23,
+              "title": "TCTD phi ngân hàng",
+              "group": "Tổ chức tín dụng",
+              "detail": "Tổ chức tín dụng **không nhận tiền gửi không kỳ hạn** và không làm dịch vụ thanh toán:\n\n- **Công ty tài chính**\n- **Công ty cho thuê tài chính**",
+              "children": [
+                {
+                  "id": 24,
+                  "title": "Công ty tài chính",
+                  "kind": "leaf",
+                  "group": "TCTD phi ngân hàng",
+                  "detail": "Cấp tín dụng tiêu dùng, tín dụng doanh nghiệp; không nhận tiền gửi thanh toán của cá nhân.",
+                  "en": "Finance Companies"
+                },
+                {
+                  "id": 25,
+                  "title": "Công ty cho thuê tài chính",
+                  "kind": "leaf",
+                  "group": "TCTD phi ngân hàng",
+                  "detail": "Cấp tín dụng trung – dài hạn qua hình thức cho thuê máy móc, thiết bị, phương tiện (leasing).",
+                  "en": "Financial Leasing Companies"
+                }
+              ],
+              "en": "Non-bank Credit Institutions"
+            }
+          ],
+          "en": "Credit Institutions"
+        },
+        {
+          "id": 26,
+          "title": "Tổ chức tài chính khác",
+          "group": "Tổ chức tài chính",
+          "detail": "Các định chế tài chính **phi tín dụng**, hoạt động chủ yếu trên thị trường vốn và bảo hiểm:\n\n- Công ty chứng khoán\n- Công ty đầu tư chứng khoán\n- Công ty quản lý quỹ / quỹ đầu tư\n- Công ty bảo hiểm",
+          "children": [
+            {
+              "id": 27,
+              "title": "Công ty chứng khoán",
+              "group": "Tổ chức tài chính khác",
+              "detail": "Trung gian trên thị trường chứng khoán, nghiệp vụ chính:\n\n- **Tự doanh chứng khoán**\n- **Bảo lãnh phát hành**\n- (Môi giới, tư vấn đầu tư…)",
+              "children": [
+                {
+                  "id": 28,
+                  "title": "Tự doanh CK",
+                  "kind": "leaf",
+                  "group": "Công ty chứng khoán",
+                  "detail": "Công ty chứng khoán mua bán chứng khoán bằng vốn của chính mình.",
+                  "en": "Proprietary Trading"
+                },
+                {
+                  "id": 29,
+                  "title": "Bảo lãnh phát hành",
+                  "kind": "leaf",
+                  "group": "Công ty chứng khoán",
+                  "detail": "Cam kết mua/phân phối chứng khoán phát hành mới cho tổ chức phát hành.",
+                  "en": "Underwriting"
+                }
+              ],
+              "en": "Securities Companies"
+            },
+            {
+              "id": 30,
+              "title": "Công ty đầu tư CK",
+              "kind": "leaf",
+              "group": "Tổ chức tài chính khác",
+              "detail": "Công ty đầu tư chứng khoán — huy động vốn để đầu tư vào danh mục chứng khoán.",
+              "en": "Securities Investment Companies"
+            },
+            {
+              "id": 31,
+              "title": "Công ty quản lý quỹ",
+              "group": "Tổ chức tài chính khác",
+              "detail": "Quản lý các **quỹ đầu tư**:\n\n- Theo cách huy động: quỹ **đại chúng** / quỹ **thành viên**\n- Theo cơ chế giao dịch: quỹ **mở** / quỹ **đóng**",
+              "children": [
+                {
+                  "id": 32,
+                  "title": "Quỹ đại chúng",
+                  "kind": "leaf",
+                  "group": "Quỹ đầu tư",
+                  "detail": "Quỹ chào bán chứng chỉ quỹ rộng rãi ra công chúng. Gồm **quỹ mở** (mua lại chứng chỉ theo yêu cầu NĐT) và **quỹ đóng** (không mua lại, giao dịch trên sàn).",
+                  "en": "Public Funds"
+                },
+                {
+                  "id": 33,
+                  "title": "Quỹ thành viên",
+                  "kind": "leaf",
+                  "group": "Quỹ đầu tư",
+                  "detail": "Quỹ huy động vốn từ số lượng hạn chế thành viên là tổ chức/nhà đầu tư chuyên nghiệp.",
+                  "en": "Member Funds"
+                }
+              ],
+              "en": "Fund Management Companies"
+            },
+            {
+              "id": 34,
+              "title": "Công ty bảo hiểm",
+              "group": "Tổ chức tài chính khác",
+              "detail": "Thực hiện chức năng **chuyển giao rủi ro** của hệ thống tài chính:\n\n- Bảo hiểm **nhân thọ**\n- Bảo hiểm **phi nhân thọ**",
+              "children": [
+                {
+                  "id": 35,
+                  "title": "BH nhân thọ",
+                  "kind": "leaf",
+                  "group": "Công ty bảo hiểm",
+                  "detail": "Bảo hiểm cho tính mạng, tuổi thọ con người; đồng thời là kênh huy động vốn dài hạn.",
+                  "en": "Life Insurance"
+                },
+                {
+                  "id": 36,
+                  "title": "BH phi nhân thọ",
+                  "kind": "leaf",
+                  "group": "Công ty bảo hiểm",
+                  "detail": "Bảo hiểm tài sản, trách nhiệm dân sự, sức khỏe… kỳ hạn ngắn hơn nhân thọ.",
+                  "en": "Non-life Insurance"
+                }
+              ],
+              "en": "Insurance Companies"
+            }
+          ],
+          "en": "Other Financial Institutions"
+        }
+      ],
+      "en": "Financial Institutions",
+      "flow": {
+        "blocks": [
+          {
+            "id": "sav",
+            "label": "Người tiết kiệm /\nnhà đầu tư",
+            "x": 10,
+            "y": 68,
+            "w": 135,
+            "h": 56
+          },
+          {
+            "id": "cred",
+            "label": "TỔ CHỨC TÍN DỤNG\nnhận tiền gửi – cấp tín dụng",
+            "x": 235,
+            "y": 12,
+            "w": 185,
+            "h": 54,
+            "color": "var(--b1)"
+          },
+          {
+            "id": "oth",
+            "label": "TCTC KHÁC\nchứng khoán • quỹ • bảo hiểm",
+            "x": 235,
+            "y": 128,
+            "w": 185,
+            "h": 54,
+            "color": "var(--b5)"
+          },
+          {
+            "id": "bor",
+            "label": "Người đi vay /\ndoanh nghiệp",
+            "x": 510,
+            "y": 68,
+            "w": 135,
+            "h": 56
+          }
+        ],
+        "links": [
+          {
+            "from": "sav",
+            "to": "cred",
+            "label": "tiền gửi"
+          },
+          {
+            "from": "cred",
+            "to": "bor",
+            "label": "tín dụng"
+          },
+          {
+            "from": "sav",
+            "to": "oth",
+            "label": "phí BH / vốn ủy thác"
+          },
+          {
+            "from": "oth",
+            "to": "bor",
+            "dashed": true,
+            "label": "đầu tư qua thị trường vốn"
+          }
+        ]
+      }
+    },
+    {
+      "id": 40,
+      "title": "Thị trường tài chính",
+      "group": "1.3 – Thị trường và công cụ tài chính",
+      "detail": "Nơi diễn ra giao dịch vốn và tài sản tài chính — kênh **tài chính trực tiếp** nối người tiết kiệm với người đi vay. Phân loại chính theo kỳ hạn:\n\n- **Thị trường tiền tệ** — vốn ngắn hạn (< 1 năm)\n- **Thị trường vốn** — vốn trung, dài hạn (trái phiếu, cổ phiếu)\n\nNgoài ra còn **thị trường hối đoái** và **thị trường hợp đồng phái sinh**.",
+      "children": [
+        {
+          "id": 41,
+          "title": "Thị trường tiền tệ",
+          "group": "Thị trường tài chính",
+          "detail": "Giao dịch vốn **ngắn hạn**, gồm:\n\n- Thị trường tín phiếu\n- Thị trường liên ngân hàng\n- Thị trường tín dụng ngắn hạn\n- Thị trường giấy tờ có giá ngắn hạn khác",
+          "children": [
+            {
+              "id": 42,
+              "title": "TT tín phiếu",
+              "group": "Thị trường tiền tệ",
+              "detail": "Giao dịch các loại **tín phiếu** ngắn hạn:\n\n- **Tín phiếu kho bạc** — do Kho bạc Nhà nước phát hành\n- **Tín phiếu NHNN** — công cụ điều hành chính sách tiền tệ",
+              "children": [
+                {
+                  "id": 43,
+                  "title": "Tín phiếu kho bạc",
+                  "kind": "leaf",
+                  "group": "TT tín phiếu",
+                  "detail": "Chứng khoán nợ ngắn hạn của Chính phủ, rủi ro thấp nhất thị trường, chuẩn cho lãi suất phi rủi ro ngắn hạn.",
+                  "en": "Treasury Bills"
+                },
+                {
+                  "id": 44,
+                  "title": "Tín phiếu NHNN",
+                  "kind": "leaf",
+                  "group": "TT tín phiếu",
+                  "detail": "Do Ngân hàng Nhà nước phát hành để hút/bơm thanh khoản, điều hành chính sách tiền tệ.",
+                  "en": "Central Bank (SBV) Bills"
+                }
+              ],
+              "en": "Bills Market"
+            },
+            {
+              "id": 45,
+              "title": "TT liên ngân hàng",
+              "group": "Thị trường tiền tệ",
+              "detail": "Nơi các ngân hàng vay/cho vay lẫn nhau để cân đối thanh khoản:\n\n- Thị trường **nội tệ**\n- Thị trường **ngoại tệ**",
+              "children": [
+                {
+                  "id": 46,
+                  "title": "Nội tệ",
+                  "kind": "leaf",
+                  "group": "TT liên ngân hàng",
+                  "detail": "Giao dịch vốn VND giữa các ngân hàng (lãi suất liên ngân hàng là chỉ báo thanh khoản hệ thống).",
+                  "en": "Domestic Currency"
+                },
+                {
+                  "id": 47,
+                  "title": "Ngoại tệ",
+                  "kind": "leaf",
+                  "group": "TT liên ngân hàng",
+                  "detail": "Giao dịch vốn ngoại tệ giữa các ngân hàng.",
+                  "en": "Foreign Currency"
+                }
+              ],
+              "en": "Interbank Market"
+            },
+            {
+              "id": 48,
+              "title": "TT tín dụng ngắn hạn",
+              "kind": "leaf",
+              "group": "Thị trường tiền tệ",
+              "detail": "Thị trường cho vay ngắn hạn giữa tổ chức tín dụng và doanh nghiệp/cá nhân (vốn lưu động, tiêu dùng…).",
+              "en": "Short-term Credit Market"
+            },
+            {
+              "id": 49,
+              "title": "TT giấy tờ có giá ngắn hạn",
+              "group": "Thị trường tiền tệ",
+              "detail": "Giao dịch các giấy tờ có giá ngắn hạn khác:\n\n- Chứng chỉ tiền gửi\n- Thương phiếu\n- Giấy nợ ngắn hạn\n- Hợp đồng mua lại (repo)",
+              "children": [
+                {
+                  "id": 50,
+                  "title": "Chứng chỉ tiền gửi",
+                  "kind": "leaf",
+                  "group": "Giấy tờ có giá ngắn hạn",
+                  "detail": "Giấy tờ có giá do ngân hàng phát hành xác nhận khoản tiền gửi có kỳ hạn, có thể chuyển nhượng.",
+                  "en": "Certificates of Deposit (CDs)"
+                },
+                {
+                  "id": 51,
+                  "title": "Thương phiếu",
+                  "kind": "leaf",
+                  "group": "Giấy tờ có giá ngắn hạn",
+                  "detail": "Giấy nhận nợ ngắn hạn phát sinh từ quan hệ mua bán chịu hàng hóa giữa doanh nghiệp.",
+                  "en": "Commercial Paper"
+                },
+                {
+                  "id": 52,
+                  "title": "Giấy nợ ngắn hạn",
+                  "kind": "leaf",
+                  "group": "Giấy tờ có giá ngắn hạn",
+                  "detail": "Các công cụ nợ ngắn hạn khác do doanh nghiệp/tổ chức phát hành.",
+                  "en": "Short-term Notes"
+                },
+                {
+                  "id": 53,
+                  "title": "Hợp đồng mua lại (repo)",
+                  "kind": "leaf",
+                  "group": "Giấy tờ có giá ngắn hạn",
+                  "detail": "Bán chứng khoán kèm cam kết mua lại ở giá và thời điểm xác định — công cụ vay vốn ngắn hạn có bảo đảm.",
+                  "en": "Repurchase Agreements (Repos)"
+                }
+              ],
+              "en": "Short-term Debt Instruments Market"
+            }
+          ],
+          "en": "Money Market"
+        },
+        {
+          "id": 54,
+          "title": "Thị trường vốn",
+          "group": "Thị trường tài chính",
+          "detail": "Giao dịch vốn **trung – dài hạn**:\n\n- **Thị trường trái phiếu** (chính phủ, doanh nghiệp)\n- **Thị trường cổ phiếu** (ưu đãi, phổ thông)\n\nThị trường chứng khoán còn hỗ trợ chức năng **giám sát doanh nghiệp**: thực hiện quyền cổ đông, nguy cơ thôn tính – sáp nhập kỷ luật nhà quản lý.",
+          "children": [
+            {
+              "id": 55,
+              "title": "TT trái phiếu",
+              "group": "Thị trường vốn",
+              "detail": "Thị trường công cụ nợ trung – dài hạn:\n\n- **Trái phiếu chính phủ**\n- **Trái phiếu doanh nghiệp**",
+              "children": [
+                {
+                  "id": 56,
+                  "title": "Trái phiếu chính phủ",
+                  "kind": "leaf",
+                  "group": "TT trái phiếu",
+                  "detail": "Công cụ nợ dài hạn của Chính phủ — chuẩn lãi suất phi rủi ro dài hạn, tài trợ ngân sách và đầu tư công.",
+                  "en": "Government Bonds"
+                },
+                {
+                  "id": 57,
+                  "title": "Trái phiếu doanh nghiệp",
+                  "kind": "leaf",
+                  "group": "TT trái phiếu",
+                  "detail": "Công cụ nợ do doanh nghiệp phát hành để huy động vốn trung – dài hạn ngoài kênh tín dụng ngân hàng.",
+                  "en": "Corporate Bonds"
+                }
+              ],
+              "en": "Bond Market"
+            },
+            {
+              "id": 58,
+              "title": "TT cổ phiếu",
+              "group": "Thị trường vốn",
+              "detail": "Thị trường vốn chủ sở hữu:\n\n- **Cổ phiếu ưu đãi**\n- **Cổ phiếu phổ thông**",
+              "children": [
+                {
+                  "id": 59,
+                  "title": "Cổ phiếu ưu đãi",
+                  "kind": "leaf",
+                  "group": "TT cổ phiếu",
+                  "detail": "Cổ tức cố định, ưu tiên chi trả trước cổ phiếu phổ thông; thường hạn chế quyền biểu quyết.",
+                  "en": "Preferred Stock"
+                },
+                {
+                  "id": 60,
+                  "title": "Cổ phiếu phổ thông",
+                  "kind": "leaf",
+                  "group": "TT cổ phiếu",
+                  "detail": "Quyền sở hữu, biểu quyết và hưởng cổ tức theo kết quả kinh doanh; chịu rủi ro cuối cùng.",
+                  "en": "Common Stock"
+                }
+              ],
+              "en": "Stock Market"
+            }
+          ],
+          "en": "Capital Market"
+        },
+        {
+          "id": 61,
+          "title": "TT hối đoái",
+          "kind": "leaf",
+          "group": "Thị trường tài chính",
+          "detail": "Thị trường mua bán, trao đổi các đồng tiền — kết nối tài chính trong nước với dòng vốn và thương mại quốc tế.",
+          "en": "Foreign Exchange Market"
+        },
+        {
+          "id": 62,
+          "title": "TT hợp đồng phái sinh",
+          "group": "Thị trường tài chính",
+          "detail": "Giao dịch các hợp đồng có giá trị **phái sinh** từ tài sản cơ sở — công cụ chuyển giao và phòng ngừa rủi ro:\n\n- Hợp đồng kỳ hạn (kỳ hạn, tương lai)\n- Hợp đồng quyền chọn (chọn mua, chọn bán)\n- Hợp đồng hoán đổi (lãi suất, ngoại tệ, rủi ro tín dụng)",
+          "children": [
+            {
+              "id": 63,
+              "title": "HĐ kỳ hạn",
+              "group": "TT phái sinh",
+              "detail": "Cam kết mua/bán tài sản ở thời điểm tương lai với giá xác định trước:\n\n- **Kỳ hạn (forward)** — thỏa thuận song phương, phi tập trung\n- **Tương lai (futures)** — chuẩn hóa, giao dịch trên sàn",
+              "children": [
+                {
+                  "id": 64,
+                  "title": "Kỳ hạn (forward)",
+                  "kind": "leaf",
+                  "group": "HĐ kỳ hạn",
+                  "detail": "Hợp đồng song phương tùy chỉnh, giao dịch OTC, có rủi ro đối tác.",
+                  "en": "Forwards"
+                },
+                {
+                  "id": 65,
+                  "title": "Tương lai (futures)",
+                  "kind": "leaf",
+                  "group": "HĐ kỳ hạn",
+                  "detail": "Hợp đồng chuẩn hóa niêm yết trên sàn, thanh toán bù trừ qua trung tâm, ký quỹ hằng ngày.",
+                  "en": "Futures"
+                }
+              ],
+              "en": "Forward-type Contracts"
+            },
+            {
+              "id": 66,
+              "title": "HĐ quyền chọn",
+              "group": "TT phái sinh",
+              "detail": "Quyền (không phải nghĩa vụ) mua/bán tài sản cơ sở ở mức giá xác định:\n\n- **Quyền chọn mua (call)**\n- **Quyền chọn bán (put)**",
+              "children": [
+                {
+                  "id": 67,
+                  "title": "Chọn mua (call)",
+                  "kind": "leaf",
+                  "group": "HĐ quyền chọn",
+                  "detail": "Quyền mua tài sản cơ sở ở giá thực hiện — có lợi khi giá tài sản tăng.",
+                  "en": "Call Options"
+                },
+                {
+                  "id": 68,
+                  "title": "Chọn bán (put)",
+                  "kind": "leaf",
+                  "group": "HĐ quyền chọn",
+                  "detail": "Quyền bán tài sản cơ sở ở giá thực hiện — công cụ phòng ngừa khi giá giảm.",
+                  "en": "Put Options"
+                }
+              ],
+              "en": "Option Contracts"
+            },
+            {
+              "id": 69,
+              "title": "HĐ hoán đổi",
+              "group": "TT phái sinh",
+              "detail": "Trao đổi dòng tiền giữa hai bên theo công thức định trước:\n\n- Hoán đổi **lãi suất**\n- Hoán đổi **ngoại tệ**\n- Hoán đổi **rủi ro tín dụng** (CDS)",
+              "children": [
+                {
+                  "id": 70,
+                  "title": "Lãi suất",
+                  "kind": "leaf",
+                  "group": "HĐ hoán đổi",
+                  "detail": "Hoán đổi dòng lãi cố định lấy thả nổi (hoặc ngược lại) trên cùng vốn gốc danh nghĩa.",
+                  "en": "Interest Rate Swaps"
+                },
+                {
+                  "id": 71,
+                  "title": "Ngoại tệ",
+                  "kind": "leaf",
+                  "group": "HĐ hoán đổi",
+                  "detail": "Hoán đổi vốn gốc và lãi giữa hai đồng tiền — phòng ngừa rủi ro tỷ giá.",
+                  "en": "Currency Swaps"
+                },
+                {
+                  "id": 72,
+                  "title": "Rủi ro tín dụng (CDS)",
+                  "kind": "leaf",
+                  "group": "HĐ hoán đổi",
+                  "detail": "Bên mua trả phí định kỳ, bên bán bồi thường nếu xảy ra sự kiện tín dụng (vỡ nợ) của tổ chức tham chiếu.",
+                  "en": "Credit Default Swaps (CDS)"
+                }
+              ],
+              "en": "Swap Contracts"
+            }
+          ],
+          "en": "Derivatives Market"
+        }
+      ],
+      "en": "Financial Markets",
+      "flow": {
+        "blocks": [
+          {
+            "id": "mm",
+            "label": "TT TIỀN TỆ\nvốn ngắn hạn (< 1 năm)",
+            "x": 20,
+            "y": 18,
+            "w": 185,
+            "h": 56,
+            "color": "var(--b2)"
+          },
+          {
+            "id": "cm",
+            "label": "TT VỐN\nvốn trung – dài hạn",
+            "x": 20,
+            "y": 160,
+            "w": 185,
+            "h": 56,
+            "color": "var(--b2)"
+          },
+          {
+            "id": "fx",
+            "label": "TT HỐI ĐOÁI\nmua bán các đồng tiền",
+            "x": 435,
+            "y": 18,
+            "w": 185,
+            "h": 56,
+            "color": "var(--b6)"
+          },
+          {
+            "id": "dv",
+            "label": "TT PHÁI SINH\nphòng ngừa – chuyển giao rủi ro",
+            "x": 228,
+            "y": 89,
+            "w": 185,
+            "h": 56,
+            "color": "var(--b3)"
+          }
+        ],
+        "links": [
+          {
+            "from": "mm",
+            "to": "cm",
+            "label": "kỳ hạn dài hơn"
+          },
+          {
+            "from": "dv",
+            "to": "mm",
+            "dashed": true,
+            "label": "phái sinh lãi suất"
+          },
+          {
+            "from": "dv",
+            "to": "cm",
+            "dashed": true,
+            "label": "phái sinh chứng khoán"
+          },
+          {
+            "from": "dv",
+            "to": "fx",
+            "dashed": true,
+            "label": "phái sinh ngoại tệ"
+          }
+        ]
+      }
+    },
+    {
+      "id": 80,
+      "title": "Công cụ tài chính",
+      "group": "1.3 – Thị trường và công cụ tài chính",
+      "detail": "Các tài sản/hợp đồng tài chính được giao dịch trên các thị trường tương ứng — mỗi thị trường gắn với nhóm công cụ riêng:\n\n- **Công cụ thị trường tiền tệ** — ngắn hạn, thanh khoản cao, rủi ro thấp\n- **Công cụ thị trường vốn** — trung, dài hạn (nợ và vốn chủ sở hữu)\n- **Công cụ phái sinh** — quản lý và chuyển giao rủi ro",
+      "children": [
+        {
+          "id": 81,
+          "title": "Công cụ TT tiền tệ",
+          "group": "Công cụ tài chính",
+          "detail": "Công cụ nợ **ngắn hạn** (dưới 1 năm), thanh khoản cao:\n\n- Tín phiếu kho bạc, tín phiếu NHNN\n- Chứng chỉ tiền gửi\n- Thương phiếu\n- Giấy nợ ngắn hạn\n- Hợp đồng mua lại (repo)",
+          "children": [
+            {
+              "id": 82,
+              "title": "Tín phiếu",
+              "kind": "leaf",
+              "group": "Công cụ TT tiền tệ",
+              "detail": "Tín phiếu kho bạc (Chính phủ) và tín phiếu NHNN (điều hành tiền tệ) — công cụ nợ ngắn hạn rủi ro thấp nhất.",
+              "en": "Bills"
+            },
+            {
+              "id": 83,
+              "title": "Chứng chỉ tiền gửi",
+              "kind": "leaf",
+              "group": "Công cụ TT tiền tệ",
+              "detail": "Xác nhận tiền gửi có kỳ hạn tại ngân hàng, có thể chuyển nhượng trên thị trường thứ cấp.",
+              "en": "Certificates of Deposit"
+            },
+            {
+              "id": 84,
+              "title": "Thương phiếu",
+              "kind": "leaf",
+              "group": "Công cụ TT tiền tệ",
+              "detail": "Giấy nhận nợ ngắn hạn từ mua bán chịu hàng hóa (hối phiếu, lệnh phiếu).",
+              "en": "Commercial Paper"
+            },
+            {
+              "id": 85,
+              "title": "Repo",
+              "kind": "leaf",
+              "group": "Công cụ TT tiền tệ",
+              "detail": "Hợp đồng mua lại — vay ngắn hạn có bảo đảm bằng chứng khoán.",
+              "en": "Repurchase Agreements"
+            }
+          ],
+          "en": "Money Market Instruments"
+        },
+        {
+          "id": 86,
+          "title": "Công cụ TT vốn",
+          "group": "Công cụ tài chính",
+          "detail": "Công cụ huy động vốn **trung – dài hạn**:\n\n- **Trái phiếu** (công cụ nợ): chính phủ, doanh nghiệp\n- **Cổ phiếu** (vốn chủ sở hữu): ưu đãi, phổ thông",
+          "children": [
+            {
+              "id": 87,
+              "title": "Trái phiếu",
+              "kind": "leaf",
+              "group": "Công cụ TT vốn",
+              "detail": "Công cụ nợ dài hạn: trái phiếu **chính phủ** (chuẩn phi rủi ro) và trái phiếu **doanh nghiệp**.",
+              "en": "Bonds"
+            },
+            {
+              "id": 88,
+              "title": "Cổ phiếu",
+              "kind": "leaf",
+              "group": "Công cụ TT vốn",
+              "detail": "Vốn chủ sở hữu: cổ phiếu **phổ thông** (quyền biểu quyết, cổ tức theo kết quả) và cổ phiếu **ưu đãi** (cổ tức cố định, ưu tiên chi trả).",
+              "en": "Stocks / Equities"
+            }
+          ],
+          "en": "Capital Market Instruments"
+        },
+        {
+          "id": 89,
+          "title": "Công cụ phái sinh",
+          "group": "Công cụ tài chính",
+          "detail": "Giá trị phái sinh từ tài sản cơ sở (lãi suất, tỷ giá, cổ phiếu, hàng hóa, tín dụng) — phục vụ **phòng ngừa và chuyển giao rủi ro**:\n\n- Kỳ hạn (forward) / Tương lai (futures)\n- Quyền chọn (call/put)\n- Hoán đổi (lãi suất, ngoại tệ, CDS)",
+          "children": [
+            {
+              "id": 90,
+              "title": "Forward / Futures",
+              "kind": "leaf",
+              "group": "Công cụ phái sinh",
+              "detail": "Cam kết mua/bán tương lai với giá định trước; forward tùy chỉnh OTC, futures chuẩn hóa trên sàn.",
+              "en": "Forward & Futures Contracts"
+            },
+            {
+              "id": 91,
+              "title": "Options",
+              "kind": "leaf",
+              "group": "Công cụ phái sinh",
+              "detail": "Quyền (không nghĩa vụ) mua (call) hoặc bán (put) tài sản cơ sở ở giá thực hiện.",
+              "en": "Option Contracts"
+            },
+            {
+              "id": 92,
+              "title": "Swaps",
+              "kind": "leaf",
+              "group": "Công cụ phái sinh",
+              "detail": "Hoán đổi dòng tiền: lãi suất, ngoại tệ, rủi ro tín dụng (CDS).",
+              "en": "Swap Contracts"
+            }
+          ],
+          "en": "Derivative Instruments"
+        }
+      ],
+      "en": "Financial Instruments",
+      "flow": {
+        "blocks": [
+          {
+            "id": "mmi",
+            "label": "CÔNG CỤ TT TIỀN TỆ\ntín phiếu • CD • thương phiếu • repo",
+            "x": 15,
+            "y": 140,
+            "w": 210,
+            "h": 58,
+            "color": "var(--b2)"
+          },
+          {
+            "id": "cmi",
+            "label": "CÔNG CỤ TT VỐN\ntrái phiếu • cổ phiếu",
+            "x": 420,
+            "y": 140,
+            "w": 210,
+            "h": 58,
+            "color": "var(--b2)"
+          },
+          {
+            "id": "der",
+            "label": "CÔNG CỤ PHÁI SINH\nforward • futures • options • swaps",
+            "x": 218,
+            "y": 18,
+            "w": 210,
+            "h": 58,
+            "color": "var(--b3)"
+          }
+        ],
+        "links": [
+          {
+            "from": "mmi",
+            "to": "cmi",
+            "label": "kỳ hạn ↑  rủi ro ↑  sinh lợi kỳ vọng ↑"
+          },
+          {
+            "from": "der",
+            "to": "mmi",
+            "dashed": true,
+            "label": "phái sinh từ tài sản cơ sở"
+          },
+          {
+            "from": "der",
+            "to": "cmi",
+            "dashed": true,
+            "label": "phái sinh từ tài sản cơ sở"
+          }
+        ]
+      }
+    },
+    {
+      "id": 100,
+      "title": "Cơ sở hạ tầng tài chính",
+      "group": "1.4 – Cơ sở hạ tầng tài chính",
+      "detail": "**Định nghĩa:** khuôn khổ các luật lệ và hệ thống làm nền tảng để các bên (tiết kiệm – cho vay; đi vay – đầu tư) *lập kế hoạch, đàm phán và thực hiện* các giao dịch tài chính.\n\n**4 thành phần:**\n\n1. Hệ thống luật pháp và quản lý nhà nước\n2. Nguồn lực và cơ chế giám sát, thực thi\n3. Thông tin\n4. Hệ thống thanh toán và hỗ trợ giao dịch chứng khoán",
+      "children": [
+        {
+          "id": 101,
+          "title": "Luật pháp & quản lý nhà nước",
+          "kind": "leaf",
+          "group": "CSHT tài chính",
+          "detail": "Hệ thống luật pháp và bộ máy quản lý nhà nước đối với khu vực tài chính — nền tảng xác lập quyền tài sản, hợp đồng, xử lý tranh chấp.",
+          "en": "Legal & Regulatory Framework"
+        },
+        {
+          "id": 102,
+          "title": "Giám sát & thực thi",
+          "kind": "leaf",
+          "group": "CSHT tài chính",
+          "detail": "Nguồn lực và cơ chế giám sát, thực thi luật lệ — quyết định **hiệu lực thực tế** của khung pháp lý, không chỉ trên văn bản.",
+          "en": "Supervision & Enforcement"
+        },
+        {
+          "id": 103,
+          "title": "Thông tin",
+          "group": "CSHT tài chính",
+          "detail": "Hạ tầng thông tin làm giảm **bất cân xứng thông tin** (nguồn gốc của lựa chọn ngược và rủi ro đạo đức):\n\n- Luật và thông lệ **kế toán, kiểm toán**\n- **Phòng đăng ký và lưu trữ thông tin tín dụng** (credit registry/bureau)\n- **Tổ chức định mức tín nhiệm** (credit rating)",
+          "children": [
+            {
+              "id": 104,
+              "title": "Kế toán – kiểm toán",
+              "kind": "leaf",
+              "group": "Thông tin",
+              "detail": "Chuẩn mực và thông lệ kế toán, kiểm toán bảo đảm chất lượng và độ tin cậy của báo cáo tài chính.",
+              "en": "Accounting & Auditing"
+            },
+            {
+              "id": 105,
+              "title": "Thông tin tín dụng",
+              "kind": "leaf",
+              "group": "Thông tin",
+              "detail": "Phòng đăng ký và lưu trữ thông tin tín dụng — lịch sử vay trả giúp sàng lọc người vay.",
+              "en": "Credit Information / Registry"
+            },
+            {
+              "id": 106,
+              "title": "Định mức tín nhiệm",
+              "kind": "leaf",
+              "group": "Thông tin",
+              "detail": "Tổ chức xếp hạng tín nhiệm đánh giá độc lập rủi ro tín dụng của tổ chức phát hành và công cụ nợ.",
+              "en": "Credit Rating Agencies"
+            }
+          ],
+          "en": "Information Infrastructure"
+        },
+        {
+          "id": 107,
+          "title": "Thanh toán & hỗ trợ giao dịch CK",
+          "kind": "leaf",
+          "group": "CSHT tài chính",
+          "detail": "Hệ thống thanh toán và hỗ trợ giao dịch chứng khoán: nơi cung cấp dịch vụ **giao dịch và niêm yết**, cơ sở hạ tầng thông tin — tăng thanh khoản, giảm chi phí giao dịch.",
+          "en": "Payment & Securities Settlement Systems"
+        }
+      ],
+      "en": "Financial Infrastructure",
+      "flow": {
+        "blocks": [
+          {
+            "id": "tx",
+            "label": "GIAO DỊCH TÀI CHÍNH\nlập kế hoạch – đàm phán – thực hiện",
+            "x": 170,
+            "y": 15,
+            "w": 300,
+            "h": 56,
+            "color": "var(--accent)"
+          },
+          {
+            "id": "p1",
+            "label": "LUẬT PHÁP &\nQUẢN LÝ NN",
+            "x": 15,
+            "y": 150,
+            "w": 140,
+            "h": 58,
+            "color": "var(--b4)"
+          },
+          {
+            "id": "p2",
+            "label": "GIÁM SÁT &\nTHỰC THI",
+            "x": 170,
+            "y": 150,
+            "w": 140,
+            "h": 58,
+            "color": "var(--b4)"
+          },
+          {
+            "id": "p3",
+            "label": "THÔNG TIN\nkế toán • tín dụng • rating",
+            "x": 325,
+            "y": 150,
+            "w": 140,
+            "h": 58,
+            "color": "var(--b4)"
+          },
+          {
+            "id": "p4",
+            "label": "THANH TOÁN &\nGIAO DỊCH CK",
+            "x": 480,
+            "y": 150,
+            "w": 140,
+            "h": 58,
+            "color": "var(--b4)"
+          }
+        ],
+        "links": [
+          {
+            "from": "p1",
+            "to": "tx"
+          },
+          {
+            "from": "p2",
+            "to": "tx"
+          },
+          {
+            "from": "p3",
+            "to": "tx"
+          },
+          {
+            "from": "p4",
+            "to": "tx"
+          }
+        ]
+      }
+    },
+    {
+      "id": 110,
+      "title": "Bối cảnh: Hệ thống tài chính toàn cầu",
+      "group": "1.1 – Hệ thống tài chính toàn cầu",
+      "detail": "Hệ thống tài chính quốc gia vận hành trong cấu trúc tài chính/tiền tệ toàn cầu, được hình thành nhằm:\n\n- Hỗ trợ **thương mại và dòng vốn** qua các nước để khuyến khích tăng trưởng\n- Đảm bảo hoạt động trôi chảy của thị trường tài chính toàn cầu (ngân hàng, thị trường nợ, cổ phiếu)\n- **Giảm thiểu rủi ro, tối đa hóa lợi ích** của hội nhập toàn cầu",
+      "children": [
+        {
+          "id": 111,
+          "title": "Thể chế trụ cột",
+          "group": "HTTC toàn cầu",
+          "detail": "Các thể chế trụ cột của cấu trúc tài chính/tiền tệ toàn cầu:\n\n- **G-20, G7/8** — diễn đàn phối hợp chính sách\n- **BIS** — Ngân hàng Thanh toán Quốc tế\n- **FSB** — Hội đồng Ổn định Tài chính\n- **IMF** — Quỹ Tiền tệ Quốc tế",
+          "children": [
+            {
+              "id": 112,
+              "title": "G-20, G7/8",
+              "kind": "leaf",
+              "group": "Thể chế trụ cột",
+              "detail": "Diễn đàn các nền kinh tế lớn phối hợp chính sách kinh tế – tài chính toàn cầu.",
+              "en": "Policy Coordination Forums"
+            },
+            {
+              "id": 113,
+              "title": "BIS",
+              "kind": "leaf",
+              "group": "Thể chế trụ cột",
+              "detail": "Bank for International Settlements — \"ngân hàng của các NHTW\", nơi đặt Ủy ban Basel về giám sát ngân hàng.",
+              "en": "Bank for International Settlements"
+            },
+            {
+              "id": 114,
+              "title": "FSB",
+              "kind": "leaf",
+              "group": "Thể chế trụ cột",
+              "detail": "Financial Stability Board — điều phối chuẩn mực giám sát, ổn định tài chính toàn cầu sau khủng hoảng 2008.",
+              "en": "Financial Stability Board"
+            },
+            {
+              "id": 115,
+              "title": "IMF",
+              "kind": "leaf",
+              "group": "Thể chế trụ cột",
+              "detail": "Vai trò: ổn định tài chính toàn cầu; ổn định tỷ giá; diễn đàn hợp tác tiền tệ; **trợ giúp tài chính tạm thời** cho thành viên khó khăn cán cân thanh toán; giám sát kinh tế – tiền tệ thế giới.",
+              "en": "International Monetary Fund"
+            }
+          ],
+          "en": "Core / Pillar Institutions"
+        },
+        {
+          "id": 116,
+          "title": "Thể chế phát triển",
+          "group": "HTTC toàn cầu",
+          "detail": "Các thể chế tài trợ phát triển:\n\n- **Nhóm Ngân hàng Thế giới**: IBRD, IFC, IDA, MIGA\n- **Ngân hàng phát triển vùng (RDB)**: AsDB, IDB, AfDB, EBRD\n- **OECD**",
+          "children": [
+            {
+              "id": 117,
+              "title": "Nhóm World Bank",
+              "kind": "leaf",
+              "group": "Thể chế phát triển",
+              "detail": "IBRD, IFC, IDA, MIGA. Vai trò: tái cấu trúc – phát triển kinh tế sau Thế chiến II; phát triển dài hạn; tài trợ dự án (hạ tầng, năng lượng, giáo dục, y tế); mục tiêu chính: **xóa đói giảm nghèo, tăng thịnh vượng chung**.",
+              "en": "World Bank Group"
+            },
+            {
+              "id": 118,
+              "title": "NH phát triển vùng",
+              "kind": "leaf",
+              "group": "Thể chế phát triển",
+              "detail": "AsDB (châu Á), IDB (châu Mỹ), AfDB (châu Phi), EBRD (Âu tái thiết) — tài trợ phát triển theo khu vực.",
+              "en": "Regional Development Banks (RDBs)"
+            },
+            {
+              "id": 119,
+              "title": "OECD",
+              "kind": "leaf",
+              "group": "Thể chế phát triển",
+              "detail": "Tổ chức Hợp tác và Phát triển Kinh tế — chuẩn mực, dữ liệu và khuyến nghị chính sách.",
+              "en": "OECD"
+            }
+          ],
+          "en": "Development Finance Institutions"
+        },
+        {
+          "id": 120,
+          "title": "Trung Quốc – chủ nợ mới",
+          "kind": "leaf",
+          "group": "HTTC toàn cầu",
+          "detail": "Theo Horn, Reinhart & Trebesch (2021, 2023): Trung Quốc trở thành chủ nợ quốc tế năng động — quy mô cho vay vượt Paris Club, IMF, WB đối với nhiều nước đang phát triển; nhiều khoản vay **không được công bố**; quy mô cứu trợ tài chính (2005–2020) so sánh được với IMF; đóng vai trò \"người cho vay cuối cùng quốc tế\" mới.",
+          "en": "China as an Emerging Global Creditor"
+        }
+      ],
+      "en": "Global Financial System (context)"
+    }
+  ],
+  "en": "Components of the Financial System",
+  "flow": {
+    "blocks": [
+      {
+        "id": "sav",
+        "label": "NGƯỜI TIẾT KIỆM – CHO VAY\nhộ gia đình, DN,\nchính phủ, nước ngoài",
+        "x": 10,
+        "y": 95,
+        "w": 155,
+        "h": 66
+      },
+      {
+        "id": "fi",
+        "label": "TỔ CHỨC TÀI CHÍNH\n(tài chính gián tiếp)",
+        "x": 255,
+        "y": 18,
+        "w": 165,
+        "h": 54,
+        "color": "var(--b1)"
+      },
+      {
+        "id": "fm",
+        "label": "THỊ TRƯỜNG TÀI CHÍNH\n(tài chính trực tiếp)",
+        "x": 255,
+        "y": 168,
+        "w": 165,
+        "h": 54,
+        "color": "var(--b2)"
+      },
+      {
+        "id": "bor",
+        "label": "NGƯỜI ĐI VAY – CHI TIÊU\nDN, chính phủ,\nhộ gia đình, nước ngoài",
+        "x": 505,
+        "y": 95,
+        "w": 150,
+        "h": 66
+      },
+      {
+        "id": "ins",
+        "label": "CÔNG CỤ TÀI CHÍNH",
+        "x": 255,
+        "y": 258,
+        "w": 165,
+        "h": 38,
+        "color": "var(--b3)"
+      },
+      {
+        "id": "infra",
+        "label": "CƠ SỞ HẠ TẦNG TÀI CHÍNH — luật pháp • giám sát • thông tin • thanh toán",
+        "x": 10,
+        "y": 316,
+        "w": 645,
+        "h": 36,
+        "color": "var(--b4)"
+      }
+    ],
+    "links": [
+      {
+        "from": "sav",
+        "to": "fi",
+        "label": "vốn"
+      },
+      {
+        "from": "fi",
+        "to": "bor",
+        "label": "vốn"
+      },
+      {
+        "from": "sav",
+        "to": "fm",
+        "label": "vốn"
+      },
+      {
+        "from": "fm",
+        "to": "bor",
+        "label": "vốn"
+      },
+      {
+        "from": "fi",
+        "to": "fm",
+        "both": true,
+        "dashed": true,
+        "label": "tham gia / đầu tư"
+      },
+      {
+        "from": "ins",
+        "to": "fm",
+        "dashed": true,
+        "label": "được giao dịch trên"
+      }
+    ]
+  }
+};
+
+/* ================= ENGINE (khong can sua) ================= */
+const canvas = document.getElementById("diagramCanvas");
+const viewport = document.getElementById("diagramViewport");
+const detailPanel = document.getElementById("detailPanel");
+const scrim = document.getElementById("scrim");
+
+const nodeById = new Map();
+const parentById = new Map();
+const displayNumberById = new Map();
+(function index(node,parent){ nodeById.set(node.id,node);
+  if(parent) parentById.set(node.id,parent);
+  (node.children||[]).forEach(c=>index(c,node)); })(diagramData,null);
+(function bfs(root){ const q=[root]; let n=1; while(q.length){ const x=q.shift();
+  displayNumberById.set(x.id,n++); (x.children||[]).forEach(c=>q.push(c)); }})(diagramData);
+
+const state = { expanded:new Set([diagramData.id]), focusedChildByParent:new Map(), zoom:0.9 };
+
+const hasChildren = n => (n.children||[]).length>0;
+function pathToRoot(id){ const p=[]; let c=nodeById.get(id); while(c){ p.unshift(c.id); c=parentById.get(c.id)||null; } return p; }
+function topBranch(id){ return pathToRoot(id)[1]; }
+function setFocus(path){ state.focusedChildByParent.clear();
+  for(let i=0;i<path.length-1;i++) state.focusedChildByParent.set(path[i],path[i+1]); }
+function visibleChildren(node){ const ch=node.children||[]; const f=state.focusedChildByParent.get(node.id);
+  if(!f) return ch; const a=ch.find(c=>c.id===f); return a?[a]:ch; }
+
+function toggleNode(id){
+  if(state.expanded.has(id)){
+    const parent=parentById.get(id);
+    const p=parent?pathToRoot(parent.id):[]; state.expanded=new Set(p); setFocus(p);
+    render(); centerNode(parent?parent.id:diagramData.id); return;
+  }
+  const p=pathToRoot(id); state.expanded=new Set(p); setFocus(p);
+  render(); centerNode(id);
+}
+
+function makeNode(node){
+  const wrap=document.createElement("div");
+  const b=topBranch(node.id);
+  wrap.className="node "+(node.kind||"")+(b?" branch-"+(((b%6)||6)):"")
+    +(hasChildren(node)?" has-children":"")+(state.expanded.has(node.id)?" is-expanded":"");
+  wrap.dataset.id=node.id;
+  const num=document.createElement("div"); num.className="node-num";
+  num.textContent=displayNumberById.get(node.id); wrap.appendChild(num);
+  const main=document.createElement("button"); main.type="button"; main.className="node-main";
+  main.textContent=node.title;
+  if(node.en){const en=document.createElement("span");en.className="node-en";en.textContent=node.en;main.appendChild(en);}
+  main.addEventListener("click",e=>{e.stopPropagation();openDetail(node.id);});
+  wrap.appendChild(main);
+  if(hasChildren(node)){
+    const bar=document.createElement("button"); bar.type="button"; bar.className="node-expand-bar";
+    bar.textContent=state.expanded.has(node.id)?"▲ thu":"▼ mo "+(node.children.length);
+    bar.addEventListener("click",e=>{e.stopPropagation();toggleNode(node.id);});
+    wrap.appendChild(bar);
+  }
+  return wrap;
+}
+function renderTree(node){
+  const li=document.createElement("li"); li.appendChild(makeNode(node));
+  if(hasChildren(node)&&state.expanded.has(node.id)){
+    const ul=document.createElement("ul");
+    visibleChildren(node).forEach(c=>ul.appendChild(renderTree(c)));
+    li.appendChild(ul);
+  }
+  return li;
+}
+function render(){
+  canvas.innerHTML="";
+  const tree=document.createElement("ul"); tree.className="tree";
+  tree.appendChild(renderTree(diagramData)); canvas.appendChild(tree);
+  applyZoom(); requestAnimationFrame(drawConnectors);
+}
+function drawConnectors(){
+  const old=canvas.querySelector("svg.links"); if(old) old.remove();
+  const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("class","links");
+  svg.setAttribute("width",canvas.scrollWidth); svg.setAttribute("height",canvas.scrollHeight);
+  const cRect=canvas.getBoundingClientRect(); const s=state.zoom||1;
+  const pt=(el,edge)=>{ const r=el.getBoundingClientRect();
+    return { x:(r.left-cRect.left)/s + (r.width/s)/2,
+             y:edge==="bottom"?(r.bottom-cRect.top)/s:(r.top-cRect.top)/s }; };
+  canvas.querySelectorAll(".node.has-children.is-expanded").forEach(pEl=>{
+    const li=pEl.closest("li"); const ul=li&&li.querySelector(":scope>ul"); if(!ul) return;
+    const pP=pt(pEl,"bottom");
+    ul.querySelectorAll(":scope>li>.node").forEach(cEl=>{
+      const cP=pt(cEl,"top"); const midY=pP.y+Math.max(16,(cP.y-pP.y)/2);
+      const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+      path.setAttribute("d","M "+pP.x+" "+pP.y+" V "+midY+" H "+cP.x+" V "+cP.y);
+      svg.appendChild(path);
+    });
+  });
+  canvas.insertBefore(svg,canvas.firstChild);
+}
+function applyZoom(){ canvas.style.transform="scale("+state.zoom+")";
+  document.getElementById("zoomValue").textContent=state.zoom.toFixed(2)+"×"; }
+function centerNode(id){ requestAnimationFrame(()=>{
+  const el=canvas.querySelector('.node[data-id="'+id+'"]'); if(!el) return;
+  const vR=viewport.getBoundingClientRect(), nR=el.getBoundingClientRect();
+  const cx=nR.left-vR.left+viewport.scrollLeft+nR.width/2;
+  viewport.scrollLeft=Math.max(0,cx-viewport.clientWidth/2);
+  viewport.scrollTop=Math.max(0,nR.top-vR.top+viewport.scrollTop-70);
+});}
+
+/* -------- mini Markdown -------- */
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function inline(s){ return esc(s)
+  .replace(/`([^`]+)`/g,"<code>$1</code>")
+  .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+  .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+  .replace(/\*([^*]+)\*/g,"<em>$1</em>"); }
+function renderMarkdown(src){
+  const lines=(src||"").split("\n"); let html="",list=false;
+  const closeList=()=>{ if(list){html+="</ul>";list=false;} };
+  for(const raw of lines){ const l=raw.trim();
+    if(!l){ closeList(); continue; }
+    let m;
+    if(m=l.match(/^#{1,4}\s+(.*)/)){ closeList(); html+="<h3>"+inline(m[1])+"</h3>"; }
+    else if(m=l.match(/^[-*]\s+(.*)/)){ if(!list){html+="<ul>";list=true;} html+="<li>"+inline(m[1])+"</li>"; }
+    else { closeList(); html+="<p>"+inline(l)+"</p>"; }
+  }
+  closeList(); return html;
+}
+
+
+/* -------- flow diagram: khoi + quan he trong panel -------- */
+function flowAnchor(b,side){
+  if(side==="top")return[b.x+b.w/2,b.y];
+  if(side==="bottom")return[b.x+b.w/2,b.y+b.h];
+  if(side==="left")return[b.x,b.y+b.h/2];
+  return[b.x+b.w,b.y+b.h/2];
+}
+function renderFlow(flow){
+  const NS="http://www.w3.org/2000/svg",pad=6;
+  const W=Math.max(...flow.blocks.map(b=>b.x+b.w))+pad;
+  const H=Math.max(...flow.blocks.map(b=>b.y+b.h))+pad;
+  const svg=document.createElementNS(NS,"svg");
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
+  const defs=document.createElementNS(NS,"defs");
+  defs.innerHTML='<marker id="fArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#8fa8d8"/></marker>';
+  svg.appendChild(defs);
+  const byId={}; flow.blocks.forEach(b=>byId[b.id]=b);
+  (flow.links||[]).forEach(l=>{
+    const a=byId[l.from],b=byId[l.to]; if(!a||!b)return;
+    const acx=a.x+a.w/2,acy=a.y+a.h/2,bcx=b.x+b.w/2,bcy=b.y+b.h/2;
+    let s1=l.fromSide,s2=l.toSide;
+    if(!s1||!s2){
+      if(Math.abs(bcx-acx)>=Math.abs(bcy-acy)){ s1=s1||(bcx>=acx?"right":"left"); s2=s2||(bcx>=acx?"left":"right"); }
+      else { s1=s1||(bcy>=acy?"bottom":"top"); s2=s2||(bcy>=acy?"top":"bottom"); }
+    }
+    const p1=flowAnchor(a,s1),p2=flowAnchor(b,s2);
+    const path=document.createElementNS(NS,"path");
+    path.setAttribute("d","M"+p1[0]+","+p1[1]+" L"+p2[0]+","+p2[1]);
+    path.setAttribute("fill","none"); path.setAttribute("stroke","#8fa8d8"); path.setAttribute("stroke-width","1.6");
+    if(l.dashed)path.setAttribute("stroke-dasharray","5 4");
+    if(!l.noArrow)path.setAttribute("marker-end","url(#fArr)");
+    if(l.both)path.setAttribute("marker-start","url(#fArr)");
+    svg.appendChild(path);
+    if(l.label){
+      const t=document.createElementNS(NS,"text");
+      t.setAttribute("x",(p1[0]+p2[0])/2); t.setAttribute("y",(p1[1]+p2[1])/2-5);
+      t.setAttribute("class","flow-link-label"); t.setAttribute("text-anchor","middle");
+      t.textContent=l.label; svg.appendChild(t);
+    }
+  });
+  flow.blocks.forEach(b=>{
+    const r=document.createElementNS(NS,"rect");
+    r.setAttribute("x",b.x);r.setAttribute("y",b.y);r.setAttribute("width",b.w);r.setAttribute("height",b.h);
+    r.setAttribute("rx",8); r.setAttribute("class","flow-block");
+    if(b.color)r.setAttribute("style","stroke:"+b.color);
+    svg.appendChild(r);
+    const lines=String(b.label).split("\n");
+    const t=document.createElementNS(NS,"text");
+    t.setAttribute("class","flow-block-label"+(b.small?" small":"")); t.setAttribute("text-anchor","middle");
+    const lh=b.small?11:13, y0=b.y+b.h/2-(lines.length-1)*lh/2;
+    lines.forEach((ln,i)=>{
+      const ts=document.createElementNS(NS,"tspan");
+      ts.setAttribute("x",b.x+b.w/2); ts.setAttribute("y",y0+i*lh+4);
+      ts.textContent=ln; t.appendChild(ts);
+    });
+    svg.appendChild(t);
+  });
+  return svg;
+}
+
+/* -------- detail panel -------- */
+function openDetail(id){
+  const node=nodeById.get(id); if(!node) return;
+  document.getElementById("panelId").textContent="Node "+displayNumberById.get(id);
+  document.getElementById("panelTitle").textContent=node.title;
+  if(node.en){const pe=document.createElement("div");pe.className="panel-en";pe.textContent=node.en;document.getElementById("panelTitle").appendChild(pe);}
+  const g=document.getElementById("panelGroup"); g.textContent=node.group||""; g.hidden=!node.group;
+  const pf=document.getElementById("panelFlow"); pf.innerHTML="";
+  if(node.flow&&node.flow.blocks&&node.flow.blocks.length){pf.appendChild(renderFlow(node.flow));pf.hidden=false;}else{pf.hidden=true;}
+  document.getElementById("panelDescription").innerHTML=renderMarkdown(node.detail||"_Chua co mo ta._");
+  const pills=document.getElementById("panelChildren"); pills.innerHTML="";
+  const label=document.getElementById("childrenLabel");
+  const ch=node.children||[]; label.hidden=ch.length===0;
+  ch.forEach(c=>{ const b=document.createElement("button");
+    b.textContent=displayNumberById.get(c.id)+". "+c.title;
+    b.addEventListener("click",()=>openDetail(c.id)); pills.appendChild(b); });
+  detailPanel.classList.add("open"); scrim.hidden=true;
+}
+function closeDetail(){ detailPanel.classList.remove("open"); scrim.hidden=true; }
+
+/* -------- keo panel ra (floating + drag + resize) -------- */
+(function(){
+  const rz=document.getElementById("panelResizer");
+  let on=false;
+  rz.addEventListener("pointerdown",e=>{
+    on=true; rz.classList.add("active"); rz.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  rz.addEventListener("pointermove",e=>{
+    if(!on)return;
+    const r=detailPanel.getBoundingClientRect();
+    const newW=Math.max(280,Math.min(window.innerWidth*.9,r.right-e.clientX));
+    detailPanel.style.width=newW+"px";
+    if(detailPanel.classList.contains("floating")) detailPanel.style.left=(r.right-newW)+"px";
+  });
+  const off=()=>{on=false;rz.classList.remove("active");};
+  rz.addEventListener("pointerup",off); rz.addEventListener("pointercancel",off);
+})();
+(function(){
+  const header=detailPanel.querySelector(".panel-header");
+  let dragging=false,offX=0,offY=0;
+  header.addEventListener("pointerdown",e=>{
+    if(e.target.closest("button"))return;
+    const r=detailPanel.getBoundingClientRect();
+    if(!detailPanel.classList.contains("floating")){
+      detailPanel.classList.add("floating");
+      detailPanel.style.left=r.left+"px"; detailPanel.style.top=r.top+"px";
+      detailPanel.style.width=r.width+"px"; detailPanel.style.height=Math.min(r.height,window.innerHeight*.86)+"px";
+    }
+    dragging=true; offX=e.clientX-r.left; offY=e.clientY-r.top;
+    header.setPointerCapture(e.pointerId);
+  });
+  header.addEventListener("pointermove",e=>{
+    if(!dragging)return;
+    detailPanel.style.left=Math.max(0,Math.min(window.innerWidth-80,e.clientX-offX))+"px";
+    detailPanel.style.top=Math.max(0,Math.min(window.innerHeight-40,e.clientY-offY))+"px";
+  });
+  header.addEventListener("pointerup",()=>{dragging=false;});
+  header.addEventListener("dblclick",()=>{ /* dock lai ben phai */
+    detailPanel.classList.remove("floating");
+    detailPanel.style.left=detailPanel.style.top=detailPanel.style.width=detailPanel.style.height="";
+  });
+})();
+
+/* -------- controls -------- */
+document.getElementById("closePanel").addEventListener("click",closeDetail);
+scrim.addEventListener("click",closeDetail);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDetail(); });
+document.getElementById("expandAll").addEventListener("click",()=>{
+  state.focusedChildByParent.clear(); state.expanded=new Set([...nodeById.values()].filter(hasChildren).map(n=>n.id));
+  render(); });
+document.getElementById("collapseAll").addEventListener("click",()=>{
+  state.expanded=new Set([diagramData.id]); state.focusedChildByParent.clear();
+  render(); centerNode(diagramData.id); });
+const zoomRange=document.getElementById("zoomRange");
+zoomRange.addEventListener("input",e=>{ state.zoom=Number(e.target.value); applyZoom();
+  requestAnimationFrame(drawConnectors); });
+/* pan */
+let drag=false,sx,sy,ssx,ssy;
+viewport.addEventListener("pointerdown",e=>{ if(e.target.closest("button"))return;
+  drag=true; viewport.classList.add("dragging"); sx=e.clientX;sy=e.clientY;
+  ssx=viewport.scrollLeft;ssy=viewport.scrollTop; viewport.setPointerCapture(e.pointerId); });
+viewport.addEventListener("pointermove",e=>{ if(!drag)return;
+  viewport.scrollLeft=ssx-(e.clientX-sx); viewport.scrollTop=ssy-(e.clientY-sy); });
+viewport.addEventListener("pointerup",()=>{drag=false;viewport.classList.remove("dragging");});
+window.addEventListener("resize",()=>requestAnimationFrame(drawConnectors));
+
+state.zoom=Number(zoomRange.value);
+render(); centerNode(diagramData.id);
+</script>
+</body>
+</html>
